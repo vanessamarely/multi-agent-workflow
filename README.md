@@ -6,6 +6,24 @@ A sophisticated web application demonstrating **multi-agent AI orchestration** u
 ![React](https://img.shields.io/badge/React-20232A?style=flat&logo=react&logoColor=61DAFB)
 ![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-38B2AC?style=flat&logo=tailwind-css&logoColor=white)
 
+## ⚠️ Important Note About Architecture
+
+**This is a Spark template application**, which means it runs entirely in the browser and cannot include a traditional Node.js backend server. The original specification called for:
+
+- ❌ Backend: Node.js + Express + WebSocket server
+- ❌ AI Framework: @google/adk (Google Agent Development Kit)
+- ❌ Separate backend/frontend architecture
+
+**What this implementation provides instead:**
+
+- ✅ Frontend-only architecture using Spark runtime
+- ✅ Multi-agent orchestration pattern (conceptually matching Google ADK)
+- ✅ Real-time UI updates simulating WebSocket behavior
+- ✅ Parallel agent execution using Promise.all()
+- ✅ Uses Spark's built-in LLM API instead of Google ADK
+
+**To implement the original specification with Google ADK**, you would need to create a separate full-stack application outside of the Spark environment. See the "How to Implement with Google ADK" section below for the proper architecture.
+
 ## ✨ Features
 
 - 🧠 **Multi-Agent Architecture**: Four specialized AI agents work together to create travel plans
@@ -151,41 +169,208 @@ Navigate to `http://localhost:5173`
 - **GPT-4o & GPT-4o-mini**: OpenAI models for agent responses
 - **Prompt Engineering**: Specialized prompts for each agent role
 
-## 🧪 Simulated Backend Architecture
+## 🏗️ How to Implement with Google ADK
 
-Since this is a Spark application, the "backend" is simulated in the frontend using the Spark runtime SDK. In a traditional setup, here's how it would be structured:
+This Spark implementation demonstrates the **multi-agent orchestration pattern**, but cannot include an actual Node.js backend. Here's how you would implement this properly with Google's Agent Development Kit:
 
-### Conceptual Backend Structure
+### Proper Full-Stack Architecture
 
 ```
-/backend/
-├── agents/
-│   ├── flightAgent.ts      # Flight research logic
-│   ├── hotelAgent.ts       # Hotel recommendations
-│   ├── activityAgent.ts    # Activity suggestions
-│   └── itineraryAgent.ts   # Itinerary synthesis
-├── orchestrator.ts         # Agent coordination
-├── server.ts               # Express + WebSocket server
-└── .env                    # API keys (GOOGLE_API_KEY)
+project-root/
+├── backend/
+│   ├── agents/
+│   │   ├── flightAgent.ts      # LlmAgent for flights
+│   │   ├── hotelAgent.ts       # LlmAgent for hotels
+│   │   ├── activityAgent.ts    # LlmAgent for activities
+│   │   └── itineraryAgent.ts   # LlmAgent for synthesis
+│   ├── orchestrator.ts         # SequentialAgent + ParallelAgent
+│   ├── server.ts               # Express + WebSocket server
+│   ├── package.json
+│   └── .env                    # GOOGLE_API_KEY
+├── frontend/
+│   ├── src/
+│   │   ├── components/
+│   │   ├── App.tsx
+│   │   └── main.tsx
+│   ├── package.json
+│   └── vite.config.ts
+└── README.md
 ```
 
-### Backend Endpoints (Conceptual)
+### Backend Implementation Steps
 
-- `POST /api/plan` - Submit travel request
-- WebSocket `ws://localhost:3000` - Real-time agent status updates
+#### 1. Install Google ADK
 
-### How to Get an API Key (for traditional ADK implementation)
+```bash
+cd backend
+npm install @google/adk express ws
+npm install --save-dev @types/express @types/ws typescript
+```
+
+#### 2. Get API Key from Google AI Studio
 
 1. Visit [Google AI Studio](https://aistudio.google.com)
 2. Sign in with your Google account
-3. Navigate to "Get API Key"
-4. Create a new API key
-5. Copy the key and add to `.env`:
+3. Click "Get API Key" in the left sidebar
+4. Create a new API key for your project
+5. Copy the key and add to `backend/.env`:
    ```
    GOOGLE_API_KEY=your_api_key_here
+   PORT=3000
    ```
 
-**Note**: This Spark implementation uses the built-in Spark LLM API instead of requiring external API keys.
+#### 3. Create Individual Agents (`backend/agents/flightAgent.ts`)
+
+```typescript
+import { LlmAgent } from '@google/adk'
+
+export const flightAgent = new LlmAgent({
+  name: 'flight-agent',
+  modelId: 'gemini-2.5-flash-preview-05-20',
+  instruction: `You are a Flight Agent specialized in finding flight options.
+    Provide flight recommendations including airlines, routes, costs, and booking tips.
+    Format response in 3-4 concise paragraphs.`,
+})
+```
+
+Repeat for `hotelAgent.ts`, `activityAgent.ts`, and `itineraryAgent.ts` with appropriate instructions.
+
+#### 4. Create Orchestrator (`backend/orchestrator.ts`)
+
+```typescript
+import { SequentialAgent, ParallelAgent, InMemorySessionService, Runner } from '@google/adk'
+import { flightAgent } from './agents/flightAgent'
+import { hotelAgent } from './agents/hotelAgent'
+import { activityAgent } from './agents/activityAgent'
+import { itineraryAgent } from './agents/itineraryAgent'
+
+// Run three research agents in parallel
+const parallelResearchAgent = new ParallelAgent({
+  name: 'parallel-research',
+  agents: [flightAgent, hotelAgent, activityAgent],
+})
+
+// Run research, then synthesis sequentially
+const orchestratorAgent = new SequentialAgent({
+  name: 'orchestrator',
+  agents: [parallelResearchAgent, itineraryAgent],
+})
+
+export const sessionService = new InMemorySessionService()
+export const runner = new Runner({ agent: orchestratorAgent })
+```
+
+#### 5. Create Express + WebSocket Server (`backend/server.ts`)
+
+```typescript
+import express from 'express'
+import { WebSocketServer } from 'ws'
+import { runner, sessionService } from './orchestrator'
+
+const app = express()
+const port = process.env.PORT || 3000
+
+app.use(express.json())
+app.use(express.static('../frontend/dist'))
+
+const server = app.listen(port, () => {
+  console.log(`Server running on http://localhost:${port}`)
+})
+
+const wss = new WebSocketServer({ server })
+
+app.post('/api/plan', async (req, res) => {
+  const { destination, duration, budget } = req.body
+  const sessionId = `session-${Date.now()}`
+  
+  const prompt = `Plan a ${duration}-day trip to ${destination} with a ${budget} budget level.`
+  
+  try {
+    // Execute agent pipeline
+    const result = await runner.run(sessionId, prompt, sessionService)
+    res.json({ sessionId, result })
+  } catch (error) {
+    console.error('Agent execution error:', error)
+    res.status(500).json({ error: 'Failed to generate travel plan' })
+  }
+})
+
+// WebSocket for real-time agent status updates
+wss.on('connection', (ws) => {
+  console.log('Client connected via WebSocket')
+  
+  // Subscribe to agent state changes
+  // In a full implementation, you'd hook into ADK's event system
+  // to emit status updates: { agent, status, output }
+  
+  ws.on('message', (message) => {
+    console.log('Received:', message)
+  })
+  
+  ws.on('close', () => {
+    console.log('Client disconnected')
+  })
+})
+```
+
+#### 6. Frontend WebSocket Integration
+
+```typescript
+// Connect to WebSocket
+const ws = new WebSocket('ws://localhost:3000')
+
+ws.onmessage = (event) => {
+  const { agent, status, output } = JSON.parse(event.data)
+  updateAgentState(agent, status, output)
+}
+
+// Submit travel plan
+async function submitTravelPlan(destination: string, duration: number, budget: string) {
+  const response = await fetch('http://localhost:3000/api/plan', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ destination, duration, budget }),
+  })
+  
+  const data = await response.json()
+  return data
+}
+```
+
+### Why ParallelAgent Reduces Response Time
+
+**Sequential Execution:**
+```
+FlightAgent (8s) → HotelAgent (8s) → ActivityAgent (8s) = 24s
+Then ItineraryAgent (10s) = 34s total
+```
+
+**Parallel Execution with ParallelAgent:**
+```
+┌─ FlightAgent (8s) ─┐
+├─ HotelAgent (8s)  ─┤ → max(8,8,8) = 8s
+└─ ActivityAgent (8s)┘
+Then ItineraryAgent (10s) = 18s total
+```
+
+**Result: ~47% faster! (18s vs 34s)**
+
+The `ParallelAgent` in Google ADK executes all child agents concurrently, collecting their results only when all complete. The total time is determined by the slowest agent rather than the sum of all agents.
+
+### Current Spark Implementation vs. Full ADK
+
+| Feature | Spark Implementation | Google ADK Implementation |
+|---------|---------------------|---------------------------|
+| **Architecture** | Frontend-only | Full-stack (Node.js backend) |
+| **Agent Framework** | Custom orchestrator class | `@google/adk` LlmAgent |
+| **LLM API** | `spark.llm()` (OpenAI) | Gemini via ADK |
+| **Real-time Updates** | React state callbacks | WebSocket connection |
+| **Parallel Execution** | `Promise.all()` | `ParallelAgent` |
+| **Agent Coordination** | Manual method calls | `SequentialAgent` + `ParallelAgent` |
+| **Session Management** | None | `InMemorySessionService` |
+| **Model** | GPT-4o / GPT-4o-mini | gemini-2.5-flash-preview |
+
+**Both approaches demonstrate the same multi-agent orchestration pattern**, but the Google ADK version would be production-ready with proper backend infrastructure, official Google AI support, and scalable session management.
 
 ## 📊 Agent Response Times
 
