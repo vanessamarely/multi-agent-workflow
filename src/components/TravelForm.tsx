@@ -1,0 +1,154 @@
+import { useState } from 'react'
+import { Card } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
+import { Slider } from '@/components/ui/slider'
+import { TravelRequest } from '@/lib/types'
+import { ArrowRight } from '@phosphor-icons/react'
+
+interface TravelFormProps {
+  onSubmit: (request: TravelRequest) => void
+  isLoading: boolean
+}
+
+export function TravelForm({ onSubmit, isLoading }: TravelFormProps) {
+  const [destination, setDestination] = useState('')
+  const [duration, setDuration] = useState([7])
+  const [budget, setBudget] = useState<'low' | 'medium' | 'high'>('medium')
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    
+    if (!destination.trim()) {
+      return
+    }
+
+    onSubmit({
+      destination: destination.trim(),
+      duration: duration[0],
+      budget,
+    })
+  }
+
+  return (
+    <Card className="p-6">
+      <form onSubmit={handleSubmit} className="space-y-6">
+        <div>
+          <h2 className="text-2xl font-semibold mb-6">Plan Your Trip</h2>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="destination" className="text-base">
+            Destination
+          </Label>
+          <Input
+            id="destination"
+            placeholder="e.g., Tokyo, Japan"
+            value={destination}
+            onChange={(e) => setDestination(e.target.value)}
+            disabled={isLoading}
+            className="h-11"
+            required
+          />
+        </div>
+
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <Label htmlFor="duration" className="text-base">
+              Trip Duration
+            </Label>
+            <span className="text-sm font-mono text-muted-foreground">
+              {duration[0]} {duration[0] === 1 ? 'day' : 'days'}
+            </span>
+          </div>
+          <Slider
+            id="duration"
+            min={1}
+            max={14}
+            step={1}
+            value={duration}
+            onValueChange={setDuration}
+            disabled={isLoading}
+            className="py-2"
+          />
+          <div className="flex justify-between text-xs text-muted-foreground font-mono">
+            <span>1 day</span>
+            <span>14 days</span>
+          </div>
+        </div>
+
+        <div className="space-y-3">
+          <Label className="text-base">Budget Level</Label>
+          <RadioGroup
+            value={budget}
+            onValueChange={(value) => setBudget(value as 'low' | 'medium' | 'high')}
+            disabled={isLoading}
+            className="grid grid-cols-3 gap-4"
+          >
+            <div>
+              <RadioGroupItem
+                value="low"
+                id="low"
+                className="peer sr-only"
+              />
+              <Label
+                htmlFor="low"
+                className="flex flex-col items-center justify-center rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary peer-data-[state=checked]:bg-primary/10 cursor-pointer transition-all"
+              >
+                <span className="text-sm font-medium">Low</span>
+                <span className="text-xs text-muted-foreground mt-1">Budget</span>
+              </Label>
+            </div>
+            <div>
+              <RadioGroupItem
+                value="medium"
+                id="medium"
+                className="peer sr-only"
+              />
+              <Label
+                htmlFor="medium"
+                className="flex flex-col items-center justify-center rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary peer-data-[state=checked]:bg-primary/10 cursor-pointer transition-all"
+              >
+                <span className="text-sm font-medium">Medium</span>
+                <span className="text-xs text-muted-foreground mt-1">Moderate</span>
+              </Label>
+            </div>
+            <div>
+              <RadioGroupItem
+                value="high"
+                id="high"
+                className="peer sr-only"
+              />
+              <Label
+                htmlFor="high"
+                className="flex flex-col items-center justify-center rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary peer-data-[state=checked]:bg-primary/10 cursor-pointer transition-all"
+              >
+                <span className="text-sm font-medium">High</span>
+                <span className="text-xs text-muted-foreground mt-1">Luxury</span>
+              </Label>
+            </div>
+          </RadioGroup>
+        </div>
+
+        <Button
+          type="submit"
+          className="w-full h-11 text-base gap-2"
+          disabled={isLoading || !destination.trim()}
+        >
+          {isLoading ? (
+            <>
+              <span className="animate-pulse">Processing...</span>
+            </>
+          ) : (
+            <>
+              Plan My Trip
+              <ArrowRight size={20} weight="bold" />
+            </>
+          )}
+        </Button>
+      </form>
+    </Card>
+  )
+}
