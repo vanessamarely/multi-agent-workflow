@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { TravelForm } from '@/components/TravelForm'
 import { AgentCard } from '@/components/AgentCard'
 import { ItineraryViewer } from '@/components/ItineraryViewer'
+import { TravelMap } from '@/components/TravelMap'
 import { Separator } from '@/components/ui/separator'
 import { Toaster, toast } from 'sonner'
 import { TravelRequest, AgentState, TravelPlan } from '@/lib/types'
@@ -18,6 +19,7 @@ function App() {
   })
   const [isProcessing, setIsProcessing] = useState(false)
   const [travelPlan, setTravelPlan] = useState<TravelPlan | null>(null)
+  const [currentRequest, setCurrentRequest] = useState<TravelRequest | null>(null)
 
   const handleAgentUpdate = (agent: AgentState) => {
     setAgents((prev) => ({
@@ -29,6 +31,7 @@ function App() {
   const handleSubmit = async (request: TravelRequest) => {
     setIsProcessing(true)
     setTravelPlan(null)
+    setCurrentRequest(request)
 
     try {
       const orchestrator = new GeminiMultiAgentOrchestrator(handleAgentUpdate)
@@ -52,6 +55,7 @@ function App() {
 
   const handleReset = () => {
     setTravelPlan(null)
+    setCurrentRequest(null)
     setAgents({
       flight: { name: 'flight', label: 'Flight Agent', status: 'idle' },
       hotel: { name: 'hotel', label: 'Hotel Agent', status: 'idle' },
@@ -128,13 +132,15 @@ function App() {
             </motion.div>
           </div>
 
-          {travelPlan && (
+          {travelPlan && currentRequest && (
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5 }}
+              className="space-y-8"
             >
               <Separator className="my-8" />
+              <TravelMap destination={currentRequest.destination} />
               <ItineraryViewer plan={travelPlan} onReset={handleReset} />
             </motion.div>
           )}
