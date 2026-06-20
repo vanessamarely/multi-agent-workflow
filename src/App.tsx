@@ -6,7 +6,7 @@ import { ItineraryViewer } from '@/components/ItineraryViewer'
 import { Separator } from '@/components/ui/separator'
 import { Toaster, toast } from 'sonner'
 import { TravelRequest, AgentState, TravelPlan } from '@/lib/types'
-import { MultiAgentOrchestrator } from '@/lib/agents/MultiAgentOrchestrator'
+import { GeminiMultiAgentOrchestrator } from '@/lib/agents/GeminiMultiAgentOrchestrator'
 import { Cpu } from '@phosphor-icons/react'
 
 function App() {
@@ -31,13 +31,13 @@ function App() {
     setTravelPlan(null)
 
     try {
-      const orchestrator = new MultiAgentOrchestrator(handleAgentUpdate)
+      const orchestrator = new GeminiMultiAgentOrchestrator(handleAgentUpdate)
       const plan = await orchestrator.executePlan(request)
       setTravelPlan(plan)
       toast.success('Your travel plan is ready!')
     } catch (error) {
       console.error('Error generating travel plan:', error)
-      toast.error('Failed to generate travel plan. Please try again.')
+      toast.error('Failed to generate travel plan. Please check your API key and try again.')
       
       setAgents({
         flight: { name: 'flight', label: 'Flight Agent', status: 'error' },
@@ -82,7 +82,7 @@ function App() {
               </h1>
             </div>
             <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
-              Watch specialized AI agents collaborate in real-time to build your perfect travel itinerary
+              Watch specialized AI agents collaborate using Google ADK patterns (ParallelAgent + SequentialAgent) to build your perfect travel itinerary
             </p>
           </motion.header>
 
