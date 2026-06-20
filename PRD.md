@@ -1,6 +1,6 @@
 # Travel Planner Multi-Agent App
 
-A demonstration application that showcases AI agent orchestration for travel planning using a multi-agent architecture pattern inspired by Google ADK.
+A demonstration application that showcases AI agent orchestration for travel planning using Google ADK's multi-agent architecture patterns (ParallelAgent + SequentialAgent) implemented in a browser environment.
 
 **Experience Qualities**:
 1. **Transparent** - Users can see each specialized agent working in real-time, making the AI orchestration process visible and understandable
@@ -26,12 +26,12 @@ The app orchestrates multiple AI agents through a structured workflow, maintains
 - **Progression**: All agents show "idle" → Three research agents (Flight/Hotel/Activity) transition to "working" simultaneously → Each completes and shows "done" with preview → Itinerary agent starts "working" → Final agent completes → Full results displayed
 - **Success criteria**: Status transitions are smooth, timing feels natural, users understand the agent workflow
 
-### AI Agent Orchestration
-- **Functionality**: Coordinate specialized agents using Spark's LLM API with prompts designed for each domain
-- **Purpose**: Generate comprehensive, contextual travel recommendations through specialized AI agents
+### AI Agent Orchestration (Google ADK Pattern)
+- **Functionality**: Coordinate specialized LLM agents using Google ADK's multi-agent patterns - ParallelAgent for concurrent execution, SequentialAgent for ordered workflows
+- **Purpose**: Generate comprehensive, contextual travel recommendations through specialized AI agents working in parallel, demonstrating reduced latency through concurrent execution
 - **Trigger**: User submits valid travel request
-- **Progression**: Request received → OrchestratorAgent parses input → ParallelAgent spawns Flight/Hotel/Activity agents → Agents generate in parallel → Results aggregated → ItineraryAgent synthesizes final plan → Display structured itinerary
-- **Success criteria**: Each agent produces relevant, coherent output; itinerary integrates all recommendations logically
+- **Progression**: Request received → OrchestratorAgent (SequentialAgent) coordinates workflow → ParallelAgent spawns FlightAgent/HotelAgent/ActivityAgent → Three agents execute concurrently → Results aggregated → ItineraryAgent (sequential) synthesizes final plan → Display structured itinerary
+- **Success criteria**: Each agent produces relevant, coherent output; parallel execution reduces total time vs sequential; itinerary integrates all recommendations logically
 
 ### Structured Itinerary Display
 - **Functionality**: Render day-by-day travel plan with flights, accommodations, activities, and recommendations

@@ -6,7 +6,7 @@ import { ItineraryViewer } from '@/components/ItineraryViewer'
 import { Separator } from '@/components/ui/separator'
 import { Toaster, toast } from 'sonner'
 import { TravelRequest, AgentState, TravelPlan } from '@/lib/types'
-import { TravelAgentOrchestrator } from '@/lib/orchestrator'
+import { MultiAgentOrchestrator } from '@/lib/agents/MultiAgentOrchestrator'
 import { Cpu } from '@phosphor-icons/react'
 
 function App() {
@@ -31,7 +31,7 @@ function App() {
     setTravelPlan(null)
 
     try {
-      const orchestrator = new TravelAgentOrchestrator(handleAgentUpdate)
+      const orchestrator = new MultiAgentOrchestrator(handleAgentUpdate)
       const plan = await orchestrator.executePlan(request)
       setTravelPlan(plan)
       toast.success('Your travel plan is ready!')

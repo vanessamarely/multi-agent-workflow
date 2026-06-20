@@ -16,11 +16,12 @@ A sophisticated web application demonstrating **multi-agent AI orchestration** u
 
 **What this implementation provides instead:**
 
-- ✅ Frontend-only architecture using Spark runtime
-- ✅ Multi-agent orchestration pattern (conceptually matching Google ADK)
-- ✅ Real-time UI updates simulating WebSocket behavior
-- ✅ Parallel agent execution using Promise.all()
-- ✅ Uses Spark's built-in LLM API instead of Google ADK
+- ✅ Frontend with Google ADK-style multi-agent architecture
+- ✅ `BaseAgent`, `ParallelAgent`, and `SequentialAgent` classes (ADK pattern)
+- ✅ Specialized agent classes (`FlightAgent`, `HotelAgent`, `ActivityAgent`, `ItineraryAgent`)
+- ✅ Real-time UI updates with agent status callbacks
+- ✅ Parallel agent execution using `Promise.all()` via `ParallelAgent`
+- ✅ Uses Spark's built-in LLM API instead of Google Gemini
 
 **To implement the original specification with Google ADK**, you would need to create a separate full-stack application outside of the Spark environment. See the "How to Implement with Google ADK" section below for the proper architecture.
 
@@ -40,17 +41,37 @@ A sophisticated web application demonstrating **multi-agent AI orchestration** u
 ```
 User Input
     ↓
-OrchestratorAgent
+MultiAgentOrchestrator
     ↓
-ParallelAgent (executes simultaneously)
-    ├── FlightAgent (suggests flight options & costs)
-    ├── HotelAgent (recommends accommodations)
-    └── ActivityAgent (finds activities & dining)
+ParallelAgent (Google ADK pattern - executes simultaneously)
+    ├── FlightAgent (extends BaseAgent)
+    ├── HotelAgent (extends BaseAgent)
+    └── ActivityAgent (extends BaseAgent)
     ↓
-ItineraryAgent (synthesizes complete plan)
+ItineraryAgent (extends BaseAgent - synthesizes complete plan)
     ↓
 Structured Travel Plan
 ```
+
+### Agent Class Structure (Mirrors Google ADK)
+
+**BaseAgent** (abstract class)
+- `name`: Agent identifier
+- `label`: Human-readable name
+- `onUpdate(callback)`: Status update mechanism
+- `execute(input): Promise<string>`: Abstract method for agent logic
+- `updateStatus(status, output?)`: Broadcasts state changes
+
+**Specialized Agents** (extend BaseAgent)
+- `FlightAgent`: Researches flights, routes, and costs
+- `HotelAgent`: Recommends accommodations based on budget
+- `ActivityAgent`: Suggests attractions and dining
+- `ItineraryAgent`: Synthesizes research into day-by-day plan
+
+**Coordination Agents** (ADK pattern)
+- `ParallelAgent<T, R>`: Executes multiple agents concurrently
+- `SequentialAgent<T, R>`: Chains agents in order
+- `MultiAgentOrchestrator`: Main entry point coordinating the workflow
 
 ### Why Parallel Execution?
 
