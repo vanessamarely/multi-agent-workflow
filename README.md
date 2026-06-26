@@ -165,19 +165,16 @@ const results = await pipeline.execute(request)
 
 **Benefits**: Ensures itinerary agent has complete information before synthesizing.
 
-## Why Gemini Instead of Spark?
+## Implementation Notes
 
-The original implementation used `spark.llm()`, which is:
-- ❌ Not a true multi-agent framework
-- ❌ No agent state management or orchestration
-- ❌ Manual coordination required
-
-This implementation uses **Google Gemini API** with **ADK-inspired patterns**:
+This app uses **Google Gemini API** (`@google/generative-ai`) with **ADK-inspired patterns**:
 - ✅ True multi-agent architecture with BaseAgent classes
-- ✅ Built-in ParallelAgent and SequentialAgent orchestration
+- ✅ ParallelAgent and SequentialAgent orchestration patterns
 - ✅ Agent state tracking and status callbacks
 - ✅ Context passing between agents
 - ✅ Production-ready, Google-backed API
+
+The implementation follows Google's Agent Development Kit (ADK) design patterns for multi-agent orchestration, adapted for browser environments.
 
 ## Customization
 
@@ -250,7 +247,7 @@ This usually means:
 
 ## Documentation
 
-- [GOOGLE_ADK_MIGRATION.md](./GOOGLE_ADK_MIGRATION.md) - Detailed explanation of why Google ADK is used instead of Spark
+- [ARCHITECTURE.md](./ARCHITECTURE.md) - Multi-agent architecture guide
 - [PRD.md](./PRD.md) - Product requirements document
 
 ## License
@@ -262,5 +259,3 @@ MIT
 - [Google AI Studio](https://aistudio.google.com/)
 - [Gemini API Documentation](https://ai.google.dev/docs)
 - [Google ADK Concepts](https://cloud.google.com/vertex-ai/generative-ai/docs/agent-builder/introduction)
-- [ParallelAgent Pattern Explanation](./GOOGLE_ADK_MIGRATION.md#2-parallelagent)
-- [SequentialAgent Pattern Explanation](./GOOGLE_ADK_MIGRATION.md#3-sequentialagent)
