@@ -7,7 +7,7 @@ import { TravelMap } from '@/components/TravelMap'
 import { Separator } from '@/components/ui/separator'
 import { Toaster, toast } from 'sonner'
 import { TravelRequest, AgentState, TravelPlan } from '@/lib/types'
-import { GeminiMultiAgentOrchestrator } from '@/lib/agents/GeminiMultiAgentOrchestrator'
+import { planTrip } from '@/lib/api'
 import { Cpu } from '@phosphor-icons/react'
 
 function App() {
@@ -34,14 +34,13 @@ function App() {
     setCurrentRequest(request)
 
     try {
-      const orchestrator = new GeminiMultiAgentOrchestrator(handleAgentUpdate)
-      const plan = await orchestrator.executePlan(request)
+      const plan = await planTrip(request, handleAgentUpdate)
       setTravelPlan(plan)
       toast.success('Your travel plan is ready!')
     } catch (error) {
       console.error('Error generating travel plan:', error)
-      toast.error('Failed to generate travel plan. Please check your API key and try again.')
-      
+      toast.error('Failed to generate travel plan. Please ensure the backend server is running.')
+
       setAgents({
         flight: { name: 'flight', label: 'Flight Agent', status: 'error' },
         hotel: { name: 'hotel', label: 'Hotel Agent', status: 'error' },
