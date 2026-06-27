@@ -99,8 +99,15 @@ html,body{
 }
 .ck{color:var(--vio)}   /* keyword */
 .cs{color:var(--gold)}  /* string  */
-.cc{color:#3D5068}      /* comment */
+.cc{color:#5A7A96}      /* comment */
 .cf{color:#60A5FA}      /* fn name */
+
+/* ── CODE SCROLL ── */
+.code-scroll{overflow-y:auto;max-height:50vh;scrollbar-width:thin;scrollbar-color:rgba(0,212,180,.28) transparent}
+.code-scroll::-webkit-scrollbar{width:5px}
+.code-scroll::-webkit-scrollbar-track{background:transparent}
+.code-scroll::-webkit-scrollbar-thumb{background:rgba(0,212,180,.28);border-radius:3px}
+.code-scroll::-webkit-scrollbar-thumb:hover{background:rgba(0,212,180,.55)}
 
 /* ── AGENT NODES ── */
 .anode{
@@ -389,9 +396,19 @@ html,body{
       <p class="body" style="font-size:clamp(.9rem,1.3vw,1.15rem)">Encadena agentes: el output de uno es el input del siguiente.</p>
     </div>
   </div>
-  <div class="code" style="margin-top:1.6rem;font-size:clamp(.85rem,1.3vw,1.1rem)">
-<span class="cc"># instalación oficial</span>
-npm install <span class="cs">@google/adk</span>
+  <div style="background:rgba(3,6,12,.88);border:1px solid rgba(0,212,180,.18);border-radius:14px;overflow:hidden;margin-top:1.6rem;font-family:'Space Mono',monospace;font-size:clamp(.85rem,1.3vw,1.1rem)">
+    <div style="background:rgba(15,26,52,.95);border-bottom:1px solid rgba(0,212,180,.12);padding:.45rem 1rem;display:flex;align-items:center;gap:.8rem">
+      <div style="display:flex;gap:.38rem">
+        <div style="width:10px;height:10px;border-radius:50%;background:#FF5F57"></div>
+        <div style="width:10px;height:10px;border-radius:50%;background:#FFBD2E"></div>
+        <div style="width:10px;height:10px;border-radius:50%;background:#27C93F"></div>
+      </div>
+      <span style="color:var(--fog);font-size:clamp(.62rem,.82vw,.76rem);letter-spacing:.1em">terminal</span>
+    </div>
+    <div style="padding:.85rem 1.4rem;line-height:1.9">
+      <div style="color:#5A7A96"># instalación oficial</div>
+      <div><span style="color:var(--fog)">$</span> npm install <span class="cs">@google/adk</span></div>
+    </div>
   </div>
 </div>
 
@@ -515,8 +532,20 @@ npm install <span class="cs">@google/adk</span>
   <div class="eyebrow">Código · LlmAgent</div>
   <h2 class="h2">Así se define<br>un <span class="gold">agente</span></h2>
   <div class="div"></div>
-  <div class="code" style="font-size:clamp(.85rem,1.35vw,1.15rem)">
-<span class="ck">import</span> { LlmAgent } <span class="ck">from</span> <span class="cs">'@google/adk'</span>;
+  <div style="background:rgba(3,6,12,.88);border:1px solid rgba(0,212,180,.18);border-radius:14px;overflow:hidden;font-family:'Space Mono',monospace;font-size:clamp(.85rem,1.35vw,1.15rem)">
+    <div style="background:rgba(15,26,52,.95);border-bottom:1px solid rgba(0,212,180,.12);padding:.45rem 1rem;display:flex;align-items:center;gap:.8rem">
+      <div style="display:flex;gap:.38rem">
+        <div style="width:10px;height:10px;border-radius:50%;background:#FF5F57"></div>
+        <div style="width:10px;height:10px;border-radius:50%;background:#FFBD2E"></div>
+        <div style="width:10px;height:10px;border-radius:50%;background:#27C93F"></div>
+      </div>
+      <span style="color:var(--fog);font-size:clamp(.62rem,.82vw,.76rem);letter-spacing:.1em">travel-orchestrator.ts</span>
+    </div>
+    <div class="code-scroll" style="display:flex;line-height:1.9;padding:.9rem 0">
+      <div style="color:#3D5068;padding:0 .8rem 0 .9rem;text-align:right;user-select:none;border-right:1px solid rgba(0,212,180,.07);min-width:2.4rem;flex-shrink:0">
+        1<br>2<br>3<br>4<br>5<br>6<br>7<br>8<br>9<br>10
+      </div>
+      <div style="padding:0 1.2rem;color:var(--aqua);white-space:pre-wrap"><span class="ck">import</span> { LlmAgent } <span class="ck">from</span> <span class="cs">'@google/adk'</span>;
 
 <span class="ck">export const</span> <span class="cf">flightAgent</span> = <span class="ck">new</span> <span class="cf">LlmAgent</span>({
   name:        <span class="cs">'flight_agent'</span>,
@@ -525,7 +554,8 @@ npm install <span class="cs">@google/adk</span>
     Dado origen, destino y presupuesto (low/medium/high),
     sugiere 2-3 opciones de vuelo con precio estimado.`</span>,
   outputKey:   <span class="cs">'flight_results'</span>, <span class="cc">// ADK guarda el output en session state</span>
-});
+});</div>
+    </div>
   </div>
   <div class="g3" style="margin-top:1.4rem;max-width:900px">
     <p class="body" style="font-size:clamp(.9rem,1.3vw,1.15rem)"><span class="mono aqua" style="display:block;margin-bottom:.3rem">name</span>Identifica al agente en el sistema. Único dentro del pipeline.</p>
@@ -539,8 +569,20 @@ npm install <span class="cs">@google/adk</span>
   <div class="eyebrow">Código · Orquestador</div>
   <h2 class="h2">Coordinando agentes<br>con <span class="aqua">ParallelAgent</span></h2>
   <div class="div aqua-div"></div>
-  <div class="code" style="font-size:clamp(.85rem,1.35vw,1.15rem)">
-<span class="ck">import</span> { ParallelAgent, SequentialAgent } <span class="ck">from</span> <span class="cs">'@google/adk'</span>;
+  <div style="background:rgba(3,6,12,.88);border:1px solid rgba(0,212,180,.18);border-radius:14px;overflow:hidden;font-family:'Space Mono',monospace;font-size:clamp(.85rem,1.35vw,1.15rem)">
+    <div style="background:rgba(15,26,52,.95);border-bottom:1px solid rgba(0,212,180,.12);padding:.45rem 1rem;display:flex;align-items:center;gap:.8rem">
+      <div style="display:flex;gap:.38rem">
+        <div style="width:10px;height:10px;border-radius:50%;background:#FF5F57"></div>
+        <div style="width:10px;height:10px;border-radius:50%;background:#FFBD2E"></div>
+        <div style="width:10px;height:10px;border-radius:50%;background:#27C93F"></div>
+      </div>
+      <span style="color:var(--fog);font-size:clamp(.62rem,.82vw,.76rem);letter-spacing:.1em">travel-orchestrator.ts</span>
+    </div>
+    <div class="code-scroll" style="display:flex;line-height:1.9;padding:.9rem 0">
+      <div style="color:#3D5068;padding:0 .8rem 0 .9rem;text-align:right;user-select:none;border-right:1px solid rgba(0,212,180,.07);min-width:2.4rem;flex-shrink:0">
+        1<br>2<br>3<br>4<br>5<br>6<br>7<br>8<br>9<br>10<br>11<br>12<br>13
+      </div>
+      <div style="padding:0 1.2rem;color:var(--aqua);white-space:pre-wrap"><span class="ck">import</span> { ParallelAgent, SequentialAgent } <span class="ck">from</span> <span class="cs">'@google/adk'</span>;
 
 <span class="cc">// Flight, Hotel y Activity corren AL MISMO TIEMPO</span>
 <span class="ck">const</span> <span class="cf">researchTeam</span> = <span class="ck">new</span> <span class="cf">ParallelAgent</span>({
@@ -552,7 +594,8 @@ npm install <span class="cs">@google/adk</span>
 <span class="ck">export const</span> <span class="cf">travelPipeline</span> = <span class="ck">new</span> <span class="cf">SequentialAgent</span>({
   name:      <span class="cs">'travel_pipeline'</span>,
   subAgents: [researchTeam, itineraryAgent],
-});
+});</div>
+    </div>
   </div>
   <div class="g2" style="margin-top:1.4rem;max-width:900px">
     <p class="body" style="font-size:clamp(.9rem,1.3vw,1.2rem)"><span class="mono aqua">ParallelAgent</span> — los 3 agentes corren simultáneamente. ADK sincroniza automáticamente.</p>
@@ -640,11 +683,11 @@ npm install <span class="cs">@google/adk</span>
         <span style="color:var(--fog);font-size:clamp(.65rem,.85vw,.78rem);letter-spacing:.04em">src/lib/api.ts</span>
       </div>
       <!-- Code with line numbers -->
-      <div style="display:flex;line-height:1.9;padding:.9rem 0">
+      <div class="code-scroll" style="display:flex;line-height:1.9;padding:.9rem 0">
         <div style="color:#3D5068;padding:0 .9rem;text-align:right;user-select:none;border-right:1px solid rgba(0,212,180,.07);min-width:2.4rem;flex-shrink:0">
           1<br>2<br>3<br>4<br>5<br>6<br>7<br>8<br>9<br>10<br>11<br>12<br>13<br>14
         </div>
-        <div style="padding:0 1.2rem;color:var(--aqua);overflow:hidden">
+        <div style="padding:0 1.2rem;color:var(--aqua);white-space:pre-wrap">
 <span style="color:#5A7A96">// React fetch + ReadableStream (SSE)</span>
 <span class="ck">const</span> res = <span class="ck">await</span> <span class="cf">fetch</span>(<span class="cs">'/api/plan'</span>, {
 &nbsp; method: <span class="cs">'POST'</span>,
@@ -768,8 +811,20 @@ npm install <span class="cs">@google/adk</span>
     Los agentes paralelos no se comunican entre ellos directamente.<br>
     Cada uno escribe su resultado en el <strong class="gold">session state</strong> usando <span class="mono aqua">outputKey</span>.
   </p>
-  <div class="code" style="font-size:clamp(.82rem,1.25vw,1.08rem);margin-bottom:1.2rem">
-<span class="cc">// Cada agente guarda su output automáticamente en session state:</span>
+  <div style="background:rgba(3,6,12,.88);border:1px solid rgba(0,212,180,.18);border-radius:14px;overflow:hidden;margin-bottom:1.2rem;font-family:'Space Mono',monospace;font-size:clamp(.82rem,1.25vw,1.08rem)">
+    <div style="background:rgba(15,26,52,.95);border-bottom:1px solid rgba(0,212,180,.12);padding:.45rem 1rem;display:flex;align-items:center;gap:.8rem">
+      <div style="display:flex;gap:.38rem">
+        <div style="width:10px;height:10px;border-radius:50%;background:#FF5F57"></div>
+        <div style="width:10px;height:10px;border-radius:50%;background:#FFBD2E"></div>
+        <div style="width:10px;height:10px;border-radius:50%;background:#27C93F"></div>
+      </div>
+      <span style="color:var(--fog);font-size:clamp(.62rem,.82vw,.76rem);letter-spacing:.1em">travel-orchestrator.ts</span>
+    </div>
+    <div class="code-scroll" style="display:flex;line-height:1.9;padding:.9rem 0">
+      <div style="color:#3D5068;padding:0 .8rem 0 .9rem;text-align:right;user-select:none;border-right:1px solid rgba(0,212,180,.07);min-width:2.4rem;flex-shrink:0">
+        1<br>2<br>3<br>4<br>5<br>6<br>7<br>8<br>9<br>10<br>11<br>12<br>13<br>14<br>15
+      </div>
+      <div style="padding:0 1.2rem;color:var(--aqua);white-space:pre-wrap"><span class="cc">// Cada agente guarda su output automáticamente en session state:</span>
 <span class="ck">const</span> <span class="cf">flightAgent</span>   = <span class="ck">new</span> <span class="cf">LlmAgent</span>({ ..., outputKey: <span class="cs">'flight_results'</span>   });
 <span class="ck">const</span> <span class="cf">hotelAgent</span>    = <span class="ck">new</span> <span class="cf">LlmAgent</span>({ ..., outputKey: <span class="cs">'hotel_results'</span>    });
 <span class="ck">const</span> <span class="cf">activityAgent</span> = <span class="ck">new</span> <span class="cf">LlmAgent</span>({ ..., outputKey: <span class="cs">'activity_results'</span> });
@@ -783,7 +838,8 @@ npm install <span class="cs">@google/adk</span>
     <span class="ck">return</span> <span class="cs">`Crea el itinerario con: ${flights} ${hotels} ${activities}`</span>;
   },
   outputKey: <span class="cs">'itinerary_results'</span>,
-});
+});</div>
+    </div>
   </div>
   <div class="card" style="max-width:880px;padding:.9rem 1.6rem;border-color:rgba(0,212,180,.25)">
     <p class="body" style="font-size:clamp(.9rem,1.35vw,1.2rem)">
@@ -797,8 +853,20 @@ npm install <span class="cs">@google/adk</span>
   <div class="eyebrow">ADK · Runner</div>
   <h2 class="h2">El <span class="gold">Runner</span><br>ejecuta el pipeline</h2>
   <div class="div"></div>
-  <div class="code" style="font-size:clamp(.82rem,1.25vw,1.08rem);margin-bottom:1.4rem">
-<span class="ck">import</span> { Runner, InMemorySessionService } <span class="ck">from</span> <span class="cs">'@google/adk'</span>;
+  <div style="background:rgba(3,6,12,.88);border:1px solid rgba(0,212,180,.18);border-radius:14px;overflow:hidden;margin-bottom:1.4rem;font-family:'Space Mono',monospace;font-size:clamp(.82rem,1.25vw,1.08rem)">
+    <div style="background:rgba(15,26,52,.95);border-bottom:1px solid rgba(0,212,180,.12);padding:.45rem 1rem;display:flex;align-items:center;gap:.8rem">
+      <div style="display:flex;gap:.38rem">
+        <div style="width:10px;height:10px;border-radius:50%;background:#FF5F57"></div>
+        <div style="width:10px;height:10px;border-radius:50%;background:#FFBD2E"></div>
+        <div style="width:10px;height:10px;border-radius:50%;background:#27C93F"></div>
+      </div>
+      <span style="color:var(--fog);font-size:clamp(.62rem,.82vw,.76rem);letter-spacing:.1em">server/index.ts</span>
+    </div>
+    <div class="code-scroll" style="display:flex;line-height:1.9;padding:.9rem 0">
+      <div style="color:#3D5068;padding:0 .8rem 0 .9rem;text-align:right;user-select:none;border-right:1px solid rgba(0,212,180,.07);min-width:2.4rem;flex-shrink:0">
+        1<br>2<br>3<br>4<br>5<br>6<br>7<br>8<br>9<br>10<br>11<br>12<br>13<br>14<br>15<br>16
+      </div>
+      <div style="padding:0 1.2rem;color:var(--aqua);white-space:pre-wrap"><span class="ck">import</span> { Runner, InMemorySessionService } <span class="ck">from</span> <span class="cs">'@google/adk'</span>;
 
 <span class="ck">const</span> runner = <span class="ck">new</span> <span class="cf">Runner</span>({
   appName:        <span class="cs">'travel-planner'</span>,
@@ -813,7 +881,8 @@ npm install <span class="cs">@google/adk</span>
     <span class="cc">// event.actions.stateDelta → texto guardado con outputKey</span>
     <span class="cf">sendSSE</span>(res, { agent: event.author, status: <span class="cs">'done'</span> });
   }
-}
+}</div>
+    </div>
   </div>
   <div class="g3" style="max-width:900px">
     <div class="card-aqua">
