@@ -10,6 +10,7 @@ export interface AgentState {
 }
 
 export interface TravelRequest {
+  origin: string
   destination: string
   duration: number
   budget: 'low' | 'medium' | 'high'

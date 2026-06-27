@@ -14,6 +14,7 @@ interface TravelFormProps {
 }
 
 export function TravelForm({ onSubmit, isLoading }: TravelFormProps) {
+  const [origin, setOrigin] = useState('')
   const [destination, setDestination] = useState('')
   const [duration, setDuration] = useState([7])
   const [budget, setBudget] = useState<'low' | 'medium' | 'high'>('medium')
@@ -21,11 +22,12 @@ export function TravelForm({ onSubmit, isLoading }: TravelFormProps) {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     
-    if (!destination.trim()) {
+    if (!origin.trim() || !destination.trim()) {
       return
     }
 
     onSubmit({
+      origin: origin.trim(),
       destination: destination.trim(),
       duration: duration[0],
       budget,
@@ -39,19 +41,36 @@ export function TravelForm({ onSubmit, isLoading }: TravelFormProps) {
           <h2 className="text-2xl font-semibold mb-6">Plan Your Trip</h2>
         </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="destination" className="text-base">
-            Destination
-          </Label>
-          <Input
-            id="destination"
-            placeholder="e.g., Tokyo, Japan"
-            value={destination}
-            onChange={(e) => setDestination(e.target.value)}
-            disabled={isLoading}
-            className="h-11"
-            required
-          />
+        <div className="grid sm:grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label htmlFor="origin" className="text-base">
+              Origin
+            </Label>
+            <Input
+              id="origin"
+              placeholder="e.g., New York, USA"
+              value={origin}
+              onChange={(e) => setOrigin(e.target.value)}
+              disabled={isLoading}
+              className="h-11"
+              required
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="destination" className="text-base">
+              Destination
+            </Label>
+            <Input
+              id="destination"
+              placeholder="e.g., Tokyo, Japan"
+              value={destination}
+              onChange={(e) => setDestination(e.target.value)}
+              disabled={isLoading}
+              className="h-11"
+              required
+            />
+          </div>
         </div>
 
         <div className="space-y-3">
@@ -135,7 +154,7 @@ export function TravelForm({ onSubmit, isLoading }: TravelFormProps) {
         <Button
           type="submit"
           className="w-full h-11 text-base gap-2"
-          disabled={isLoading || !destination.trim()}
+          disabled={isLoading || !origin.trim() || !destination.trim()}
         >
           {isLoading ? (
             <>

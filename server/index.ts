@@ -77,7 +77,7 @@ app.get('/health', (_req: Request, res: Response) => {
 /**
  * POST /api/plan
  *
- * Body: { destination: string, duration: number, budget: 'low' | 'medium' | 'high' }
+ * Body: { origin: string, destination: string, duration: number, budget: 'low' | 'medium' | 'high' }
  *
  * Streams SSE events:
  *   { type: 'agent_update', agent: 'flight'|'hotel'|'activity'|'itinerary', status: 'working'|'done', output?: string }
@@ -92,14 +92,15 @@ app.post('/api/plan', async (req: Request, res: Response) => {
   res.setHeader('X-Accel-Buffering', 'no') // disable nginx buffering if present
   res.flushHeaders()
 
-  const { destination, duration, budget } = req.body as {
+  const { origin, destination, duration, budget } = req.body as {
+    origin?: string
     destination?: string
     duration?: number
     budget?: string
   }
 
-  if (!destination || !duration || !budget) {
-    sendSSE(res, { type: 'error', message: 'Missing required fields: destination, duration, budget' })
+  if (!origin || !destination || !duration || !budget) {
+    sendSSE(res, { type: 'error', message: 'Missing required fields: origin, destination, duration, budget' })
     res.end()
     return
   }
@@ -110,7 +111,7 @@ app.post('/api/plan', async (req: Request, res: Response) => {
     high: 'premium — prioritize quality and luxury',
   }
 
-  const userMessage = `Plan a ${duration}-day trip to ${destination}. Budget level: ${budget} (${budgetGuide[budget] ?? budget}).`
+  const userMessage = `Plan a ${duration}-day trip from ${origin} to ${destination}. Budget level: ${budget} (${budgetGuide[budget] ?? budget}).`
 
   try {
     const { runner, sessionService } = createTravelRunner()
