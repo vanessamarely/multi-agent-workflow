@@ -1,3 +1,15 @@
+/**
+ * TravelForm.tsx — Formulario principal de entrada del usuario.
+ *
+ * Recoge los 4 parámetros que definen el viaje:
+ *   - origin      → ciudad/país de partida
+ *   - destination → ciudad/país de destino
+ *   - duration    → duración en días (slider 1-14)
+ *   - budget      → nivel de presupuesto (low / medium / high)
+ *
+ * Al hacer submit construye un objeto TravelRequest y lo pasa al
+ * callback onSubmit definido en App.tsx, que inicia el pipeline ADK.
+ */
 import { useState } from 'react'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -14,14 +26,18 @@ interface TravelFormProps {
 }
 
 export function TravelForm({ onSubmit, isLoading }: TravelFormProps) {
+  // Estado local del formulario — no se necesita una librería de forms
+  // dado que son solo 4 campos simples sin validación compleja
   const [origin, setOrigin] = useState('')
   const [destination, setDestination] = useState('')
-  const [duration, setDuration] = useState([7])
+  const [duration, setDuration] = useState([7])   // Slider devuelve array
   const [budget, setBudget] = useState<'low' | 'medium' | 'high'>('medium')
 
+  // Construye el TravelRequest y lo entrega al padre (App.tsx)
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     
+    // Doble guarda: el botón ya está deshabilitado, pero se protege el handler también
     if (!origin.trim() || !destination.trim()) {
       return
     }

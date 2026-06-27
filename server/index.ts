@@ -1,12 +1,20 @@
 /**
- * Travel Planner Backend Server
+ * server/index.ts — Servidor Express del ADK Travel Planner.
  *
- * Exposes a single SSE endpoint:
+ * Expone un único endpoint SSE:
  *   POST /api/plan
  *
- * The endpoint runs the ADK multi-agent workflow and streams
- * real-time agent status updates + final results to the frontend
- * using Server-Sent Events (SSE).
+ * Flujo completo:
+ *  1. Recibe el TravelRequest (origin, destination, duration, budget) en el body.
+ *  2. Valida que todos los campos estén presentes.
+ *  3. Crea una sesión ADK única (UUID) para aislar el estado de cada petición.
+ *  4. Construye el mensaje del usuario y ejecuta el pipeline SequentialAgent.
+ *  5. Por cada evento del stream ADK mapea el agente y emite un SSE al cliente:
+ *       - Primer evento del agente    → { type: 'agent_update', status: 'working' }
+ *       - isFinalResponse del agente  → { type: 'agent_update', status: 'done', output }
+ *  6. Al terminar el pipeline lee el estado de sesión como fallback
+ *     (los agentes paralelos a veces sólo escriben en stateDelta, no en content).
+ *  7. Emite { type: 'complete', plan } y cierra el stream con res.end().
  */
 
 import 'dotenv/config'
@@ -20,6 +28,8 @@ import { createTravelRunner } from './travel-orchestrator.js'
 // Validate environment
 // ──────────────────────────────────────────────
 
+// La API key de Gemini es requerida; el ADK la lee directamente de process.env.
+// dotenv/config (importado arriba) ya cargó el archivo .env antes de llegar aquí.
 const API_KEY = process.env.GEMINI_API_KEY
 if (!API_KEY) {
   console.error(
@@ -36,16 +46,18 @@ if (!API_KEY) {
 // SSE helper
 // ──────────────────────────────────────────────
 
+// Tipo discriminado de los eventos SSE que este servidor puede emitir
 type SSEEvent =
   | { type: 'agent_update'; agent: string; status: 'working' | 'done' | 'error'; output?: string }
   | { type: 'complete'; plan: { flights: string; hotels: string; activities: string; itinerary: string } }
   | { type: 'error'; message: string }
 
+/** Serializa y escribe un evento SSE en el response stream */
 function sendSSE(res: Response, data: SSEEvent) {
   res.write(`data: ${JSON.stringify(data)}\n\n`)
 }
 
-// Maps ADK agent name → frontend key AND session state key (outputKey)
+// Mapea el nombre del agente en ADK al identificador corto usado en el frontend
 const AGENT_KEY_MAP: Record<string, string> = {
   flight_agent: 'flight',
   hotel_agent: 'hotel',
@@ -53,7 +65,8 @@ const AGENT_KEY_MAP: Record<string, string> = {
   itinerary_agent: 'itinerary',
 }
 
-// Maps ADK agent name → the outputKey they write into session state
+// Mapea el nombre del agente ADK a la clave de outputKey que usa para guardar
+// su resultado en el estado de sesión (usado como fallback en la lectura final)
 const AGENT_OUTPUT_KEY: Record<string, string> = {
   flight_agent: 'flight_results',
   hotel_agent: 'hotel_results',
@@ -85,7 +98,9 @@ app.get('/health', (_req: Request, res: Response) => {
  *   { type: 'error', message: string }
  */
 app.post('/api/plan', async (req: Request, res: Response) => {
-  // ── SSE headers ──────────────────────────────
+  // ── Cabeceras SSE ────────────────────────────
+  // Indica al cliente que la respuesta es un stream continuo de eventos;
+  // 'no-cache' evita que proxies almacenen el stream en buffer.
   res.setHeader('Content-Type', 'text/event-stream')
   res.setHeader('Cache-Control', 'no-cache')
   res.setHeader('Connection', 'keep-alive')
@@ -105,29 +120,31 @@ app.post('/api/plan', async (req: Request, res: Response) => {
     return
   }
 
+  // Texto descriptivo del presupuesto que se incluye en el prompt al LLM
   const budgetGuide: Record<string, string> = {
     low: 'economy/budget — prioritize affordable options',
     medium: 'mid-range — balance comfort and value',
     high: 'premium — prioritize quality and luxury',
   }
 
+  // Mensaje que recibirán todos los agentes como contexto inicial del viaje
   const userMessage = `Plan a ${duration}-day trip from ${origin} to ${destination}. Budget level: ${budget} (${budgetGuide[budget] ?? budget}).`
 
   try {
     const { runner, sessionService } = createTravelRunner()
-    const sessionId = crypto.randomUUID()
+    const sessionId = crypto.randomUUID()  // Sesión única por petición HTTP
     const userId = 'traveler'
 
+    // Crea la sesión en memoria; ADK la usa para pasar datos entre agentes
     await sessionService.createSession({
       appName: 'travel-planner',
       userId,
       sessionId,
     })
 
-    const agentOutputs: Record<string, string> = {}
-    const seenAgents = new Set<string>()
-    // Accumulate text content per agent across events,
-    // since the isFinalResponse event may be a state-update event with no text.
+    const agentOutputs: Record<string, string> = {}   // Outputs capturados desde el stream
+    const seenAgents = new Set<string>()               // Evita emitir 'working' más de una vez
+    // Acumula texto por agente porque el evento isFinalResponse puede no tener content
     const agentTextBuffers: Record<string, string> = {}
 
     // ── Stream ADK events ────────────────────────
@@ -145,23 +162,22 @@ app.post('/api/plan', async (req: Request, res: Response) => {
       const agentKey = AGENT_KEY_MAP[author]
       if (!agentKey) continue
 
-      // First event from this agent → signal it's working
+      // Primer evento de este agente → notificar al frontend que empezó a trabajar
       if (!seenAgents.has(author)) {
         seenAgents.add(author)
         sendSSE(res, { type: 'agent_update', agent: agentKey, status: 'working' })
       }
 
-      // Accumulate any text content emitted by this agent.
-      // ADK LlmAgents with outputKey store their response in
-      // event.actions.stateDelta[outputKey] rather than event.content.
-      // Check both sources so we capture the text regardless of which
-      // event carries it.
+      // Acumula texto del contenido del evento.
+      // Los LlmAgents con outputKey guardan su respuesta en
+      // event.actions.stateDelta[outputKey] en vez de event.content;
+      // se comprueba ambas fuentes para cubrir los dos casos.
       const textFromContent = stringifyContent(event)
       if (textFromContent) {
         agentTextBuffers[agentKey] = textFromContent
       }
 
-      // Also check the stateDelta for the outputKey value
+      // Comprueba también el stateDelta con el outputKey del agente
       const outputKey = AGENT_OUTPUT_KEY[author]
       if (outputKey) {
         const deltaText = event.actions?.stateDelta?.[outputKey]
@@ -170,8 +186,8 @@ app.post('/api/plan', async (req: Request, res: Response) => {
         }
       }
 
-      // Final response from this agent → signal done + send buffered output.
-      // If the event contains an error, emit 'error' status instead.
+      // Respuesta final del agente → emitir 'done' con el texto acumulado.
+      // Si el evento trae errorCode, emitir 'error' en su lugar.
       if (isFinalResponse(event)) {
         if (event.errorCode) {
           sendSSE(res, {
@@ -188,9 +204,10 @@ app.post('/api/plan', async (req: Request, res: Response) => {
       }
     }
 
-    // ── Read parallel-agent results from session state ───
-    // outputKey stores the text in session state; use it as fallback
-    // if the event stream didn't surface the text.
+    // ── Lectura de resultados desde el estado de sesión (fallback) ───────────
+    // Los agentes paralelos a veces sólo dejan su output en session.state
+    // vía outputKey, sin incluirlo en event.content. Se lee el estado final
+    // como fuente de verdad complementaria.
     const session = await sessionService.getSession({
       appName: 'travel-planner',
       userId,
@@ -214,8 +231,8 @@ app.post('/api/plan', async (req: Request, res: Response) => {
         ((state['itinerary_results'] as string | undefined) ?? ''),
     }
 
-    // Re-emit done events for parallel agents if their output was only
-    // in session state (empty in agentOutputs but present in stateOutputs).
+    // Re-emite eventos 'done' para los agentes paralelos cuyo output
+    // solo estaba en session state (agentOutputs vacío pero stateOutputs con contenido)
     for (const [key, stateKey] of [
       ['flight', 'flights'],
       ['hotel', 'hotels'],

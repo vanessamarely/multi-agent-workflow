@@ -1,7 +1,31 @@
-import { useEffect, useRef, useState } from 'react'
+/**
+ * TravelMap.tsx — Mapa geográfico interactivo de la ruta del viaje.
+ *
+ * Usa react-leaflet con tiles de OpenStreetMap (sin API key) para mostrar
+ * un mapa real con:
+ *   - Marcador verde en el origen (🛫)
+ *   - Marcador azul en el destino (🛬)
+ *   - Línea punteada que une los dos puntos
+ *   - Auto-zoom para encuadrar ambas ciudades en pantalla
+ *
+ * Las coordenadas están precargadas en `cityCoordinates` (formato [lng, lat]).
+ * Al pasar a Leaflet se invierten a [lat, lng] que es lo que la librería espera.
+ * Si el destino no se encuentra en el diccionario, muestra un fallback textual.
+ */
+import { useEffect, useState } from 'react'
 import { Card } from '@/components/ui/card'
-import * as d3 from 'd3'
 import { motion } from 'framer-motion'
+import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from 'react-leaflet'
+import L from 'leaflet'
+import 'leaflet/dist/leaflet.css'
+
+// Fix default marker icons broken by bundlers
+delete (L.Icon.Default.prototype as unknown as Record<string, unknown>)._getIconUrl
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
+  iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+  shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+})
 
 interface Location {
   name: string
@@ -136,22 +160,64 @@ const cityCoordinates: Record<string, [number, number]> = {
   'romania': [26.1025, 44.4268],
 }
 
-const defaultOrigin: [number, number] = [-74.0060, 40.7128]
+// cityCoordinates stores [lng, lat]; Leaflet needs [lat, lng]
+const defaultOrigin: [number, number] = [40.7128, -74.0060] // New York [lat, lng]
 
+/**
+ * Busca coordenadas [lat, lng] para una ciudad dada.
+ * La búsqueda es case-insensitive e incluye coincidencias parciales
+ * (ej. "New York City" coincide con la clave "new york").
+ * Retorna null si la ciudad no está en el diccionario.
+ */
 function findCoordinates(location: string): [number, number] | null {
   const normalized = location.toLowerCase().trim()
-  
+
   for (const [key, coords] of Object.entries(cityCoordinates)) {
     if (normalized.includes(key) || key.includes(normalized)) {
-      return coords
+      // swap from [lng, lat] → [lat, lng] for Leaflet
+      return [coords[1], coords[0]]
     }
   }
-  
+
+  return null
+}
+
+/**
+ * Crea un icono circular personalizado con el color especificado.
+ * Se usa L.divIcon para evitar depender de imágenes externas de Leaflet
+ * que a menudo fallan con bundlers como Vite.
+ */
+function makeIcon(color: string) {
+  return L.divIcon({
+    className: '',
+    html: `<div style="
+      width:18px;height:18px;border-radius:50%;
+      background:${color};border:3px solid white;
+      box-shadow:0 2px 6px rgba(0,0,0,0.4);
+    "></div>`,
+    iconSize: [18, 18],
+    iconAnchor: [9, 9],
+    popupAnchor: [0, -12],
+  })
+}
+
+/**
+ * FitBounds — Sub-componente que ajusta el zoom del mapa para mostrar
+ * los dos marcadores. Usa el hook useMap() de react-leaflet para acceder
+ * a la instancia del mapa y llamar fitBounds con un padding de 60px.
+ * Solo se ejecuta cuando cambian las posiciones (efecto declarativo).
+ */
+function FitBounds({ positions }: { positions: [number, number][] }) {
+  const map = useMap()
+  useEffect(() => {
+    if (positions.length >= 2) {
+      map.fitBounds(positions as L.LatLngBoundsExpression, { padding: [60, 60] })
+    }
+  }, [map, positions])
   return null
 }
 
 export function TravelMap({ destination, origin = 'New York' }: TravelMapProps) {
-  const svgRef = useRef<SVGSVGElement>(null)
   const [locations, setLocations] = useState<{ origin: Location; destination: Location } | null>(null)
   const [destNotFound, setDestNotFound] = useState(false)
 
@@ -171,190 +237,9 @@ export function TravelMap({ destination, origin = 'New York' }: TravelMapProps) 
     }
   }, [destination, origin])
 
-  useEffect(() => {
-    if (!svgRef.current || !locations) return
-
-    const svg = d3.select(svgRef.current)
-    svg.selectAll('*').remove()
-
-    const width = svgRef.current.clientWidth
-    const height = svgRef.current.clientHeight
-
-    const projection = d3.geoMercator()
-      .center([
-        (locations.origin.coordinates[0] + locations.destination.coordinates[0]) / 2,
-        (locations.origin.coordinates[1] + locations.destination.coordinates[1]) / 2,
-      ])
-      .scale(200)
-      .translate([width / 2, height / 2])
-
-    const originPoint = projection(locations.origin.coordinates)
-    const destPoint = projection(locations.destination.coordinates)
-
-    if (!originPoint || !destPoint) return
-
-    const defs = svg.append('defs')
-    
-    const gradient = defs.append('linearGradient')
-      .attr('id', 'route-gradient')
-      .attr('x1', '0%')
-      .attr('x2', '100%')
-      .attr('y1', '0%')
-      .attr('y2', '0%')
-    
-    gradient.append('stop')
-      .attr('offset', '0%')
-      .attr('stop-color', 'oklch(0.75 0.15 200)')
-      .attr('stop-opacity', 0.8)
-    
-    gradient.append('stop')
-      .attr('offset', '100%')
-      .attr('stop-color', 'oklch(0.65 0.22 240)')
-      .attr('stop-opacity', 0.8)
-
-    const glowFilter = defs.append('filter')
-      .attr('id', 'glow')
-      .attr('x', '-50%')
-      .attr('y', '-50%')
-      .attr('width', '200%')
-      .attr('height', '200%')
-    
-    glowFilter.append('feGaussianBlur')
-      .attr('stdDeviation', '3')
-      .attr('result', 'coloredBlur')
-    
-    const feMerge = glowFilter.append('feMerge')
-    feMerge.append('feMergeNode').attr('in', 'coloredBlur')
-    feMerge.append('feMergeNode').attr('in', 'SourceGraphic')
-
-    const g = svg.append('g')
-
-    const midX = (originPoint[0] + destPoint[0]) / 2
-    const midY = (originPoint[1] + destPoint[1]) / 2 - 80
-
-    const pathData = `M ${originPoint[0]},${originPoint[1]} Q ${midX},${midY} ${destPoint[0]},${destPoint[1]}`
-
-    const routePath = g.append('path')
-      .attr('d', pathData)
-      .attr('fill', 'none')
-      .attr('stroke', 'url(#route-gradient)')
-      .attr('stroke-width', 3)
-      .attr('stroke-dasharray', '8,8')
-      .attr('opacity', 0)
-      .attr('filter', 'url(#glow)')
-
-    routePath.transition()
-      .duration(800)
-      .attr('opacity', 1)
-
-    const planeIcon = '✈'
-    const plane = g.append('text')
-      .attr('font-size', '24')
-      .attr('text-anchor', 'middle')
-      .attr('dominant-baseline', 'middle')
-      .attr('opacity', 0)
-      .text(planeIcon)
-      .attr('transform', `translate(${originPoint[0]}, ${originPoint[1]})`)
-
-    const pathLength = (routePath.node() as SVGPathElement).getTotalLength()
-
-    plane.transition()
-      .delay(400)
-      .duration(0)
-      .attr('opacity', 1)
-      .transition()
-      .duration(3000)
-      .ease(d3.easeQuadInOut)
-      .attrTween('transform', () => {
-        return (t: number) => {
-          const point = (routePath.node() as SVGPathElement).getPointAtLength(t * pathLength)
-          const nextPoint = (routePath.node() as SVGPathElement).getPointAtLength(Math.min(t * pathLength + 10, pathLength))
-          const angle = Math.atan2(nextPoint.y - point.y, nextPoint.x - point.x) * 180 / Math.PI
-          return `translate(${point.x}, ${point.y}) rotate(${angle + 45})`
-        }
-      })
-      .on('end', function repeat(this: SVGTextElement) {
-        d3.select(this)
-          .transition()
-          .duration(3000)
-          .ease(d3.easeQuadInOut)
-          .attrTween('transform', () => {
-            return (t: number) => {
-              const point = (routePath.node() as SVGPathElement).getPointAtLength(t * pathLength)
-              const nextPoint = (routePath.node() as SVGPathElement).getPointAtLength(Math.min(t * pathLength + 10, pathLength))
-              const angle = Math.atan2(nextPoint.y - point.y, nextPoint.x - point.x) * 180 / Math.PI
-              return `translate(${point.x}, ${point.y}) rotate(${angle + 45})`
-            }
-          })
-          .on('end', repeat)
-      })
-
-    const originCircle = g.append('circle')
-      .attr('cx', originPoint[0])
-      .attr('cy', originPoint[1])
-      .attr('r', 0)
-      .attr('fill', 'oklch(0.75 0.15 200)')
-      .attr('opacity', 0.8)
-      .attr('filter', 'url(#glow)')
-
-    originCircle.transition()
-      .duration(600)
-      .attr('r', 8)
-
-    const destCircle = g.append('circle')
-      .attr('cx', destPoint[0])
-      .attr('cy', destPoint[1])
-      .attr('r', 0)
-      .attr('fill', 'oklch(0.65 0.22 240)')
-      .attr('opacity', 0.8)
-      .attr('filter', 'url(#glow)')
-
-    destCircle.transition()
-      .delay(200)
-      .duration(600)
-      .attr('r', 10)
-
-    g.append('text')
-      .attr('x', originPoint[0])
-      .attr('y', originPoint[1] + 25)
-      .attr('text-anchor', 'middle')
-      .attr('fill', 'oklch(0.95 0.01 240)')
-      .attr('font-size', '12')
-      .attr('font-weight', '600')
-      .attr('opacity', 0)
-      .text(locations.origin.name)
-      .transition()
-      .delay(400)
-      .duration(400)
-      .attr('opacity', 1)
-
-    g.append('text')
-      .attr('x', destPoint[0])
-      .attr('y', destPoint[1] + 25)
-      .attr('text-anchor', 'middle')
-      .attr('fill', 'oklch(0.95 0.01 240)')
-      .attr('font-size', '14')
-      .attr('font-weight', '700')
-      .attr('opacity', 0)
-      .text(locations.destination.name)
-      .transition()
-      .delay(600)
-      .duration(400)
-      .attr('opacity', 1)
-
-    const zoom = d3.zoom<SVGSVGElement, unknown>()
-      .scaleExtent([0.5, 4])
-      .on('zoom', (event: d3.D3ZoomEvent<SVGSVGElement, unknown>) => {
-        g.attr('transform', event.transform.toString())
-      })
-
-    svg.call(zoom)
-
-  }, [locations])
-
   if (!locations) {
     return (
-      <Card className="p-6 h-[400px] flex items-center justify-center">
+      <Card className="p-6 h-[420px] flex items-center justify-center">
         <div className="text-center text-muted-foreground">
           <p className="text-2xl mb-3">✈️</p>
           <p className="text-sm font-medium">
@@ -369,6 +254,11 @@ export function TravelMap({ destination, origin = 'New York' }: TravelMapProps) 
       </Card>
     )
   }
+
+  const positions: [number, number][] = [
+    locations.origin.coordinates,
+    locations.destination.coordinates,
+  ]
 
   return (
     <motion.div
@@ -385,15 +275,33 @@ export function TravelMap({ destination, origin = 'New York' }: TravelMapProps) 
             {locations.origin.name} → {locations.destination.name}
           </p>
         </div>
-        <div className="relative w-full h-[400px] rounded-lg overflow-hidden bg-card border border-border">
-          <svg
-            ref={svgRef}
-            className="w-full h-full"
-            style={{ background: 'oklch(0.20 0.02 240)' }}
-          />
-          <div className="absolute bottom-3 right-3 text-xs text-muted-foreground bg-card/80 backdrop-blur-sm px-3 py-1.5 rounded-md border border-border">
-            Scroll to zoom • Drag to pan
-          </div>
+        <div className="relative w-full h-[420px] rounded-lg overflow-hidden border border-border">
+          <MapContainer
+            center={[0, 0]}
+            zoom={2}
+            style={{ width: '100%', height: '100%' }}
+            scrollWheelZoom
+          >
+            <TileLayer
+              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+            />
+            <FitBounds positions={positions} />
+            <Marker position={locations.origin.coordinates} icon={makeIcon('#22c55e')}>
+              <Popup>
+                <strong>🛫 Origin</strong><br />{locations.origin.name}
+              </Popup>
+            </Marker>
+            <Marker position={locations.destination.coordinates} icon={makeIcon('#3b82f6')}>
+              <Popup>
+                <strong>🛬 Destination</strong><br />{locations.destination.name}
+              </Popup>
+            </Marker>
+            <Polyline
+              positions={positions}
+              pathOptions={{ color: '#3b82f6', weight: 3, dashArray: '8 8', opacity: 0.8 }}
+            />
+          </MapContainer>
         </div>
       </Card>
     </motion.div>

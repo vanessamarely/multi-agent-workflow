@@ -1,3 +1,18 @@
+/**
+ * App.tsx — Componente raíz de la aplicación.
+ *
+ * Flujo principal:
+ *  1. El usuario llena TravelForm con origen, destino, duración y presupuesto.
+ *  2. handleSubmit llama a planTrip() (src/lib/api.ts), que abre una conexión
+ *     SSE al backend Express (server/index.ts → POST /api/plan).
+ *  3. El backend ejecuta el pipeline ADK multi-agente:
+ *       ParallelAgent  → flight_agent, hotel_agent, activity_agent (concurrente)
+ *       SequentialAgent → itinerary_agent (espera los tres anteriores)
+ *  4. Cada evento SSE del servidor actualiza el estado `agents` en tiempo real,
+ *     lo que repinta las AgentCard con el estado actual (idle/working/done/error).
+ *  5. Al recibir el evento 'complete', se guarda el TravelPlan y se muestra
+ *     TravelMap + ItineraryViewer con los resultados.
+ */
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { TravelForm } from '@/components/TravelForm'
@@ -11,16 +26,19 @@ import { planTrip } from '@/lib/api'
 import { Cpu } from '@phosphor-icons/react'
 
 function App() {
+  // Estado inicial de los 4 agentes; cada uno arranca en 'idle'
   const [agents, setAgents] = useState<Record<string, AgentState>>({
     flight: { name: 'flight', label: 'Flight Agent', status: 'idle' },
     hotel: { name: 'hotel', label: 'Hotel Agent', status: 'idle' },
     activity: { name: 'activity', label: 'Activity Agent', status: 'idle' },
     itinerary: { name: 'itinerary', label: 'Itinerary Agent', status: 'idle' },
   })
-  const [isProcessing, setIsProcessing] = useState(false)
-  const [travelPlan, setTravelPlan] = useState<TravelPlan | null>(null)
-  const [currentRequest, setCurrentRequest] = useState<TravelRequest | null>(null)
+  const [isProcessing, setIsProcessing] = useState(false)           // bloquea el form durante el procesamiento
+  const [travelPlan, setTravelPlan] = useState<TravelPlan | null>(null)          // resultado final del pipeline
+  const [currentRequest, setCurrentRequest] = useState<TravelRequest | null>(null) // datos del viaje para el mapa
 
+  // Callback pasado a planTrip(); se invoca cada vez que llega un evento
+  // SSE de tipo 'agent_update' del servidor, actualizando el estado de un agente.
   const handleAgentUpdate = (agent: AgentState) => {
     setAgents((prev) => ({
       ...prev,
@@ -28,12 +46,18 @@ function App() {
     }))
   }
 
+  // Se ejecuta cuando el usuario envía el formulario.
+  // Resetea el plan anterior, guarda la solicitud (para el mapa) e inicia
+  // el streaming SSE con el backend. Cuando la promesa resuelve, el plan
+  // completo ya está disponible y se muestra el mapa + el itinerario.
   const handleSubmit = async (request: TravelRequest) => {
     setIsProcessing(true)
     setTravelPlan(null)
     setCurrentRequest(request)
 
     try {
+      // planTrip abre SSE y va llamando handleAgentUpdate por cada evento;
+      // resuelve con el TravelPlan completo al recibir 'complete'.
       const plan = await planTrip(request, handleAgentUpdate)
       setTravelPlan(plan)
       toast.success('Your travel plan is ready!')
@@ -41,6 +65,7 @@ function App() {
       console.error('Error generating travel plan:', error)
       toast.error('Failed to generate travel plan. Please ensure the backend server is running.')
 
+      // Marca todos los agentes en error para feedback visual inmediato
       setAgents({
         flight: { name: 'flight', label: 'Flight Agent', status: 'error' },
         hotel: { name: 'hotel', label: 'Hotel Agent', status: 'error' },
@@ -52,6 +77,7 @@ function App() {
     }
   }
 
+  // Limpia todo el estado para permitir planificar un nuevo viaje
   const handleReset = () => {
     setTravelPlan(null)
     setCurrentRequest(null)

@@ -1,13 +1,18 @@
 /**
- * ADK Multi-Agent Travel Planner Orchestrator
+ * server/travel-orchestrator.ts — Composición del pipeline ADK multi-agente.
  *
- * Workflow:
+ * Arquitectura del workflow (patrón Google ADK):
+ *
  *   SequentialAgent (travelPipeline)
- *   ├── ParallelAgent (researchTeam)   ← runs concurrently
+ *   ├── ParallelAgent (researchTeam)     ← Los 3 agentes corren CONCURRENTES
  *   │   ├── LlmAgent (flight_agent)    → outputKey: 'flight_results'
  *   │   ├── LlmAgent (hotel_agent)     → outputKey: 'hotel_results'
- *   │   └── LlmAgent (activity_agent) → outputKey: 'activity_results'
- *   └── LlmAgent (itinerary_agent)    ← reads session state set by parallel agents
+ *   │   └── LlmAgent (activity_agent)  → outputKey: 'activity_results'
+ *   └── LlmAgent (itinerary_agent)      ← Lee session state de los 3 anteriores
+ *
+ * El outputKey de cada LlmAgent guarda su respuesta en el estado de sesión.
+ * El itinerary_agent accede a esos valores mediante ctx.state.get() en su
+ * función de instrucción dinámica para consolidar un plan de viaje completo.
  */
 
 import {
@@ -19,15 +24,19 @@ import {
 } from '@google/adk'
 import type { ReadonlyContext } from '@google/adk'
 
+// Se usan dos modelos distintos según la carga de trabajo:
+//   Flash → más rápido y económico, ideal para los 3 agentes paralelos
+//   Pro   → mejor calidad de razonamiento para el itinerario final
 const FLASH_MODEL = 'gemini-2.5-flash'
 const PRO_MODEL = 'gemini-2.5-pro'
 
 // ──────────────────────────────────────────────
-// Specialist Agents (run in parallel)
-// Each agent stores its output in session state
-// via `outputKey` so the itinerary agent can read it.
+// Agentes especialistas (corren en paralelo)
+// Cada agente recibe el mismo mensaje del usuario y guarda
+// su respuesta en session state usando `outputKey`.
 // ──────────────────────────────────────────────
 
+// flight_agent: especializado en opciones de vuelo según presupuesto y ruta
 const flightAgent = new LlmAgent({
   name: 'flight_agent',
   model: FLASH_MODEL,
@@ -39,9 +48,10 @@ Given the travel details in the user message, provide:
 - Practical booking tips
 
 Keep the response concise (3-4 paragraphs) and practical.`,
-  outputKey: 'flight_results',
+  outputKey: 'flight_results',  // Clave en session state donde se guarda la respuesta
 })
 
+// hotel_agent: especializado en recomendaciones de alojamiento
 const hotelAgent = new LlmAgent({
   name: 'hotel_agent',
   model: FLASH_MODEL,
@@ -56,6 +66,7 @@ Keep the response concise (3-4 paragraphs) and practical.`,
   outputKey: 'hotel_results',
 })
 
+// activity_agent: especializado en atracciones, experiencias y gastronomía
 const activityAgent = new LlmAgent({
   name: 'activity_agent',
   model: FLASH_MODEL,
@@ -71,9 +82,11 @@ Keep the response concise (3-4 paragraphs) and practical.`,
 })
 
 // ──────────────────────────────────────────────
-// Itinerary Agent (runs after parallel agents)
-// Reads session state populated by flightAgent,
-// hotelAgent, and activityAgent via their outputKeys.
+// Agente orquestador (corre después del ParallelAgent)
+// Lee los 3 outputKeys del estado de sesión para consolidar
+// un itinerario día a día que integra vuelos, hotel y actividades.
+// Usa una función de instrucción dinámica (ctx.state.get) porque
+// los datos de los agentes paralelos solo están disponibles en runtime.
 // ──────────────────────────────────────────────
 
 const itineraryAgent = new LlmAgent({
@@ -109,28 +122,41 @@ Create a well-structured itinerary that includes:
 })
 
 // ──────────────────────────────────────────────
-// ADK Workflow composition
+// Composición del workflow ADK
 // ──────────────────────────────────────────────
 
-// ParallelAgent: runs flight, hotel, activity concurrently via Promise.all internally
+// ParallelAgent: ejecuta los 3 agentes especialistas de forma concurrente
+// (internamente usa Promise.all), reduciendo el tiempo total de respuesta
 const researchTeam = new ParallelAgent({
   name: 'research_team',
   subAgents: [flightAgent, hotelAgent, activityAgent],
 })
 
-// SequentialAgent: first executes researchTeam (parallel), then itineraryAgent
+// SequentialAgent: garantiza el orden de ejecución
+// Primero researchTeam (paralelo), luego itineraryAgent (que depende del anterior)
 export const travelPipeline = new SequentialAgent({
   name: 'travel_pipeline',
   subAgents: [researchTeam, itineraryAgent],
 })
 
 // ──────────────────────────────────────────────
-// Runner factory
+// Factory del Runner
 // ──────────────────────────────────────────────
 
+/**
+ * createTravelRunner — Crea una instancia del Runner ADK con sesión en memoria.
+ *
+ * Se llama una vez por petición HTTP desde index.ts para garantizar
+ * aislamiento de estado entre usuarios concurrentes.
+ * InMemorySessionService es apropiado para desarrollo; en producción
+ * se reemplazaría por un servicio de sesión persistente.
+ */
 export function createTravelRunner() {
+  // InMemorySessionService almacena el estado de sesión en RAM;
+  // se pierde al reiniciar el servidor (suficiente para este caso de uso)
   const sessionService = new InMemorySessionService()
 
+  // Runner es el ejecutor del pipeline; conecta el agente raíz con la sesión
   const runner = new Runner({
     appName: 'travel-planner',
     agent: travelPipeline,
