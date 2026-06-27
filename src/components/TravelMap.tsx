@@ -72,6 +72,68 @@ const cityCoordinates: Record<string, [number, number]> = {
   'mumbai': [72.8777, 19.0760],
   'india': [72.8777, 19.0760],
   'delhi': [77.1025, 28.7041],
+  'bogota': [-74.0721, 4.7110],
+  'colombia': [-74.0721, 4.7110],
+  'medellin': [-75.5636, 6.2442],
+  'cartagena': [-75.5144, 10.3910],
+  'lima': [-77.0428, -12.0464],
+  'peru': [-77.0428, -12.0464],
+  'santiago': [-70.6693, -33.4489],
+  'chile': [-70.6693, -33.4489],
+  'caracas': [-66.9036, 10.4806],
+  'venezuela': [-66.9036, 10.4806],
+  'quito': [-78.4678, -0.1807],
+  'ecuador': [-78.4678, -0.1807],
+  'havana': [-82.3666, 23.1136],
+  'cuba': [-82.3666, 23.1136],
+  'cancun': [-86.8515, 21.1619],
+  'guadalajara': [-103.3496, 20.6597],
+  'toronto': [-79.3832, 43.6532],
+  'canada': [-79.3832, 43.6532],
+  'vancouver': [-123.1207, 49.2827],
+  'madrid': [-3.7038, 40.4168],
+  'milan': [9.1900, 45.4654],
+  'zurich': [8.5417, 47.3769],
+  'switzerland': [8.5417, 47.3769],
+  'brussels': [4.3517, 50.8503],
+  'belgium': [4.3517, 50.8503],
+  'stockholm': [18.0686, 59.3293],
+  'sweden': [18.0686, 59.3293],
+  'oslo': [10.7522, 59.9139],
+  'norway': [10.7522, 59.9139],
+  'copenhagen': [12.5683, 55.6761],
+  'denmark': [12.5683, 55.6761],
+  'nairobi': [36.8219, -1.2921],
+  'kenya': [36.8219, -1.2921],
+  'cape town': [18.4241, -33.9249],
+  'south africa': [18.4241, -33.9249],
+  'johannesburg': [28.0473, -26.2041],
+  'lagos': [3.3792, 6.5244],
+  'nigeria': [3.3792, 6.5244],
+  'accra': [-0.1870, 5.6037],
+  'ghana': [-0.1870, 5.6037],
+  'kuala lumpur': [101.6869, 3.1390],
+  'malaysia': [101.6869, 3.1390],
+  'jakarta': [106.8456, -6.2088],
+  'manila': [120.9842, 14.5995],
+  'philippines': [120.9842, 14.5995],
+  'taipei': [121.5654, 25.0330],
+  'taiwan': [121.5654, 25.0330],
+  'tel aviv': [34.7818, 32.0853],
+  'israel': [34.7818, 32.0853],
+  'riyadh': [46.7219, 24.6877],
+  'saudi arabia': [46.7219, 24.6877],
+  'abu dhabi': [54.3773, 24.4539],
+  'doha': [51.5310, 25.2854],
+  'qatar': [51.5310, 25.2854],
+  'auckland': [174.7633, -36.8485],
+  'new zealand': [174.7633, -36.8485],
+  'warsaw': [21.0122, 52.2297],
+  'poland': [21.0122, 52.2297],
+  'budapest': [19.0402, 47.4979],
+  'hungary': [19.0402, 47.4979],
+  'bucharest': [26.1025, 44.4268],
+  'romania': [26.1025, 44.4268],
 }
 
 const defaultOrigin: [number, number] = [-74.0060, 40.7128]
@@ -91,16 +153,21 @@ function findCoordinates(location: string): [number, number] | null {
 export function TravelMap({ destination, origin = 'New York' }: TravelMapProps) {
   const svgRef = useRef<SVGSVGElement>(null)
   const [locations, setLocations] = useState<{ origin: Location; destination: Location } | null>(null)
+  const [destNotFound, setDestNotFound] = useState(false)
 
   useEffect(() => {
     const destCoords = findCoordinates(destination)
     const originCoords = findCoordinates(origin) || defaultOrigin
 
     if (destCoords) {
+      setDestNotFound(false)
       setLocations({
         origin: { name: origin, coordinates: originCoords },
         destination: { name: destination, coordinates: destCoords },
       })
+    } else {
+      setDestNotFound(true)
+      setLocations(null)
     }
   }, [destination, origin])
 
@@ -289,8 +356,15 @@ export function TravelMap({ destination, origin = 'New York' }: TravelMapProps) 
     return (
       <Card className="p-6 h-[400px] flex items-center justify-center">
         <div className="text-center text-muted-foreground">
-          <p className="text-sm">Unable to map destination</p>
-          <p className="text-xs mt-1">{destination}</p>
+          <p className="text-2xl mb-3">✈️</p>
+          <p className="text-sm font-medium">
+            {origin} → {destination}
+          </p>
+          {destNotFound && (
+            <p className="text-xs mt-2 opacity-60">
+              Map coordinates not available for this destination
+            </p>
+          )}
         </div>
       </Card>
     )

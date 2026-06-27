@@ -139,7 +139,7 @@ function App() {
               className="space-y-8"
             >
               <Separator className="my-8" />
-              <TravelMap destination={currentRequest.destination} />
+              <TravelMap destination={currentRequest.destination} origin={currentRequest.origin} />
               <ItineraryViewer plan={travelPlan} onReset={handleReset} />
             </motion.div>
           )}
