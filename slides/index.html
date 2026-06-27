@@ -628,20 +628,39 @@ npm install <span class="cs">@google/adk</span>
         </div>
       </div>
     </div>
-    <div class="code" style="font-size:clamp(.78rem,1.1vw,.98rem);align-self:stretch">
-<span class="cc">// React usa fetch + ReadableStream (SSE)</span>
+    <!-- Editor-style code block -->
+    <div style="background:rgba(3,6,12,.88);border:1px solid rgba(0,212,180,.18);border-radius:14px;overflow:hidden;align-self:stretch;font-family:'Space Mono',monospace;font-size:clamp(.76rem,1.05vw,.96rem)">
+      <!-- Title bar -->
+      <div style="background:rgba(15,26,52,.95);border-bottom:1px solid rgba(0,212,180,.12);padding:.45rem 1rem;display:flex;align-items:center;gap:.8rem">
+        <div style="display:flex;gap:.38rem">
+          <div style="width:11px;height:11px;border-radius:50%;background:#FF5F57;opacity:.9"></div>
+          <div style="width:11px;height:11px;border-radius:50%;background:#FFBD2E;opacity:.9"></div>
+          <div style="width:11px;height:11px;border-radius:50%;background:#27C93F;opacity:.9"></div>
+        </div>
+        <span style="color:var(--fog);font-size:clamp(.65rem,.85vw,.78rem);letter-spacing:.04em">src/lib/api.ts</span>
+      </div>
+      <!-- Code with line numbers -->
+      <div style="display:flex;line-height:1.9;padding:.9rem 0">
+        <div style="color:#3D5068;padding:0 .9rem;text-align:right;user-select:none;border-right:1px solid rgba(0,212,180,.07);min-width:2.4rem;flex-shrink:0">
+          1<br>2<br>3<br>4<br>5<br>6<br>7<br>8<br>9<br>10<br>11<br>12<br>13<br>14
+        </div>
+        <div style="padding:0 1.2rem;color:var(--aqua);overflow:hidden">
+<span style="color:#5A7A96">// React fetch + ReadableStream (SSE)</span>
 <span class="ck">const</span> res = <span class="ck">await</span> <span class="cf">fetch</span>(<span class="cs">'/api/plan'</span>, {
-  method: <span class="cs">'POST'</span>,
-  headers: { <span class="cs">'Content-Type'</span>: <span class="cs">'application/json'</span> },
-  body: <span class="cf">JSON.stringify</span>(request),
+&nbsp; method: <span class="cs">'POST'</span>,
+&nbsp; headers: { <span class="cs">'Content-Type'</span>: <span class="cs">'application/json'</span> },
+&nbsp; body: <span class="cf">JSON.stringify</span>(request),
 });
 <span class="ck">const</span> reader = res.body.<span class="cf">getReader</span>();
-
-<span class="cc">// Eventos SSE recibidos:</span>
-<span class="cc">// { type:'agent_update', agent, status, output }</span>
-<span class="cc">// { type:'complete', plan: { flights, hotels,</span>
-<span class="cc">//   activities, itinerary } }</span>
-<span class="cc">// idle → working → done</span>
+&nbsp;
+<span style="color:#5A7A96">// Eventos SSE recibidos:</span>
+<span class="ck">type</span> <span style="color:#10B981">SSEEvent</span> =
+&nbsp; | { type: <span class="cs">'agent_update'</span>; agent: <span class="cs">string</span>; status: <span class="cs">'idle'</span>|<span class="cs">'working'</span>|<span class="cs">'done'</span> }
+&nbsp; | { type: <span class="cs">'complete'</span>; plan: { flights, hotels, activities, itinerary } };
+&nbsp;
+<span style="color:#5A7A96">// idle → working → done</span>
+        </div>
+      </div>
     </div>
   </div>
 </div>
@@ -651,39 +670,92 @@ npm install <span class="cs">@google/adk</span>
   <div class="eyebrow">Proyecto · Travel Planner</div>
   <h2 class="h2">Estructura del<br><span class="gold">proyecto</span></h2>
   <div class="div"></div>
-  <div class="g2" style="max-width:920px;align-items:start">
-    <div class="code" style="font-size:clamp(.85rem,1.25vw,1.1rem)">
-<span class="cc">travel-planner/</span>
-├── <span class="cf">server/</span>
-│   ├── <span class="cs">travel-orchestrator.ts</span>
-│   └── <span class="cs">index.ts</span>
-├── <span class="cf">src/</span>
-│   ├── <span class="cf">lib/</span>
-│   │   ├── <span class="cs">api.ts</span>
-│   │   └── <span class="cs">types.ts</span>
-│   └── <span class="cf">components/</span>
-│       ├── <span class="cs">AgentCard.tsx</span>
-│       └── <span class="cs">App.tsx</span>
-└── <span class="cs">.env</span>
+  <div class="g2" style="max-width:960px;align-items:start">
+
+    <!-- Explorer panel estilo VS Code -->
+    <div style="background:rgba(3,6,12,.88);border:1px solid rgba(0,212,180,.18);border-radius:14px;overflow:hidden;font-family:'Space Mono',monospace;font-size:clamp(.82rem,1.15vw,1.02rem)">
+      <!-- Title bar -->
+      <div style="background:rgba(15,26,52,.95);border-bottom:1px solid rgba(0,212,180,.12);padding:.45rem 1rem;display:flex;align-items:center;gap:.8rem">
+        <div style="display:flex;gap:.38rem">
+          <div style="width:10px;height:10px;border-radius:50%;background:#FF5F57"></div>
+          <div style="width:10px;height:10px;border-radius:50%;background:#FFBD2E"></div>
+          <div style="width:10px;height:10px;border-radius:50%;background:#27C93F"></div>
+        </div>
+        <span style="color:var(--fog);font-size:clamp(.62rem,.82vw,.76rem);letter-spacing:.1em;text-transform:uppercase">EXPLORER</span>
+      </div>
+      <!-- File tree -->
+      <div style="padding:1.1rem 1.3rem;line-height:2.1">
+
+        <div style="color:var(--snow);font-weight:600">📁 travel-planner/</div>
+
+        <div style="padding-left:1.1rem">
+          <div style="color:var(--fog)">📂 server/</div>
+          <div style="padding-left:1.1rem">
+            <div style="color:var(--gold)">
+              <span style="opacity:.45">▸</span> travel-orchestrator.ts
+            </div>
+            <div style="color:var(--aqua)">
+              <span style="opacity:.45">▸</span> index.ts
+            </div>
+          </div>
+        </div>
+
+        <div style="padding-left:1.1rem">
+          <div style="color:var(--fog)">📂 src/</div>
+          <div style="padding-left:1.1rem">
+
+            <div style="color:var(--fog)">📂 lib/</div>
+            <div style="padding-left:1.1rem">
+              <div style="color:var(--vio)">
+                <span style="opacity:.45">▸</span> api.ts
+              </div>
+              <div style="color:#7A8CA8">
+                <span style="opacity:.45">▸</span> types.ts
+              </div>
+            </div>
+
+            <div style="color:var(--fog)">📂 components/</div>
+            <div style="padding-left:1.1rem">
+              <div style="color:#60A5FA">
+                <span style="opacity:.45">▸</span> AgentCard.tsx
+              </div>
+              <div style="color:#7A8CA8">
+                <span style="opacity:.45">▸</span> App.tsx
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <div style="padding-left:1.1rem">
+          <div style="color:#10B981">
+            <span style="opacity:.45">▸</span> .env
+          </div>
+        </div>
+
+      </div>
     </div>
+
+    <!-- Cards descriptivas -->
     <div style="display:flex;flex-direction:column;gap:.85rem">
-      <div class="card" style="padding:1rem 1.4rem;border-color:rgba(240,165,0,.2)">
-        <p class="mono gold" style="font-size:clamp(.82rem,1.1vw,1rem);margin-bottom:.3rem">server/travel-orchestrator.ts</p>
-        <p class="body" style="font-size:clamp(.88rem,1.25vw,1.12rem)">LlmAgent ×4 + ParallelAgent + SequentialAgent. Toda la lógica ADK aquí.</p>
+      <div class="card" style="padding:1rem 1.4rem;border-color:rgba(240,165,0,.3)">
+        <p class="mono gold" style="font-size:clamp(.8rem,1.05vw,.96rem);margin-bottom:.3rem">server/travel-orchestrator.ts</p>
+        <p class="body" style="font-size:clamp(.86rem,1.2vw,1.08rem)">LlmAgent ×4 + ParallelAgent + SequentialAgent. Toda la lógica ADK aquí.</p>
       </div>
-      <div class="card" style="padding:1rem 1.4rem;border-color:rgba(0,212,180,.2)">
-        <p class="mono aqua" style="font-size:clamp(.82rem,1.1vw,1rem);margin-bottom:.3rem">server/index.ts</p>
-        <p class="body" style="font-size:clamp(.88rem,1.25vw,1.12rem)">Express + SSE. Ejecuta el Runner ADK y transmite eventos al frontend.</p>
+      <div class="card" style="padding:1rem 1.4rem;border-color:rgba(0,212,180,.3)">
+        <p class="mono aqua" style="font-size:clamp(.8rem,1.05vw,.96rem);margin-bottom:.3rem">server/index.ts</p>
+        <p class="body" style="font-size:clamp(.86rem,1.2vw,1.08rem)">Express + SSE. Ejecuta el Runner ADK y transmite eventos al frontend.</p>
       </div>
-      <div class="card" style="padding:1rem 1.4rem;border-color:rgba(155,111,235,.2)">
-        <p class="mono vio" style="font-size:clamp(.82rem,1.1vw,1rem);margin-bottom:.3rem">src/lib/api.ts</p>
-        <p class="body" style="font-size:clamp(.88rem,1.25vw,1.12rem)">Cliente SSE con fetch + ReadableStream. Conecta React con el backend.</p>
+      <div class="card" style="padding:1rem 1.4rem;border-color:rgba(155,111,235,.3)">
+        <p class="mono vio" style="font-size:clamp(.8rem,1.05vw,.96rem);margin-bottom:.3rem">src/lib/api.ts</p>
+        <p class="body" style="font-size:clamp(.86rem,1.2vw,1.08rem)">Cliente SSE con fetch + ReadableStream. Conecta React con el backend.</p>
       </div>
-      <div class="card" style="padding:1rem 1.4rem;border-color:rgba(96,165,250,.2)">
-        <p class="mono" style="color:#60A5FA;font-size:clamp(.82rem,1.1vw,1rem);margin-bottom:.3rem">src/components/AgentCard.tsx</p>
-        <p class="body" style="font-size:clamp(.88rem,1.25vw,1.12rem)">Muestra idle → working → done en tiempo real.</p>
+      <div class="card" style="padding:1rem 1.4rem;border-color:rgba(96,165,250,.3)">
+        <p class="mono" style="color:#60A5FA;font-size:clamp(.8rem,1.05vw,.96rem);margin-bottom:.3rem">src/components/AgentCard.tsx</p>
+        <p class="body" style="font-size:clamp(.86rem,1.2vw,1.08rem)">Muestra idle → working → done en tiempo real.</p>
       </div>
     </div>
+
   </div>
 </div>
 
